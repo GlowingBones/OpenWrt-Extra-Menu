@@ -1,156 +1,111 @@
-# OpenWrt LuCI 3rd Party Menu Editor (MEdit)
+# OpenWrt Extra Menu
 
-This adds a **"3rd Party"** top level menu to LuCI and a **Menu Edit** page where you can add, edit, and delete links to local or external web apps. It is designed for OpenWrt 24.x with the modern LuCI (ucode) stack.
+A customizable "3rd Party" menu for LuCI that lets you add links to local services and external web apps without editing Lua code.
 
-You can:
-- Add entries pointing to local services (Transmission, PGP tools, etc).
-- Add entries pointing to full external URLs (for example wigle uploads).
-- Choose whether each entry opens embedded inside LuCI or in its own page.
-- Let non technical users manage the menu through a simple page instead of editing Lua.
+## Features
 
-## Files in this repository
+- Adds a **3rd Party** top-level menu to LuCI
+- Built-in **Menu Editor** for managing entries through the web interface
+- Link to local services (Transmission, Adblock, custom apps)
+- Link to external URLs (WiGLE uploads, cloud dashboards, etc.)
+- Choose to embed apps inside LuCI or open them directly
 
-- `thirdparty.lua`  
-  LuCI controller that defines the **3rd Party** menu and Menu Editor, and routes per item.
+## Requirements
 
-- `embed.htm`  
-  LuCI view that embeds a third party app in an iframe under the LuCI header.
-
-- `medit.htm`  
-  LuCI view for the Menu Editor page.  
-  - Shows current entries in a table.  
-  - Clicking a row loads it into the form for editing.  
-  - Has a confirmation overlay.  
-  - On "Apply changes" it submits and redirects back to `/cgi-bin/luci`.
-
-- `thirdparty_menu.conf.example`  
-  Example configuration with a few entries.
-
-- `install.sh`  
-  Helper script to copy files into the right locations on the router and restart services.
+- OpenWrt 24.x with modern LuCI (ucode stack)
+- SSH access to your router
 
 ## Installation
 
-1. Copy the repo to the router
-
-   From your PC, in the directory where you cloned this repo:
-
+1. Clone the repository to your PC:
    ```sh
-   scp -r ./ root@your-openwrt-ip:/root/thirdparty-menu
+   git clone https://github.com/GlowingBones/OpenWrt-Extra-Menu.git
    ```
 
-   Replace `your-openwrt-ip` with the address of your OpenWrt device.
-
-2. SSH into the router
-
+2. Copy to your router:
    ```sh
-   ssh root@your-openwrt-ip
+   scp -r OpenWrt-Extra-Menu root@<router-ip>:/root/OpenWrt-Extra-Menu
    ```
 
-3. Run the installer
-
+3. SSH into the router and run the installer:
    ```sh
-   cd /root/thirdparty-menu
+   ssh root@<router-ip>
+   cd /root/OpenWrt-Extra-Menu
    chmod +x install.sh
    ./install.sh
    ```
 
-4. Open LuCI
-
-   - In a browser go to your LuCI interface.
-   - You should see a **3rd Party** top level menu.
-   - Under it there is **Menu Edit** plus any items defined in `/etc/thirdparty_menu.conf`.
+4. Open LuCI in your browser. You should see a **3rd Party** menu.
 
 ## Using the Menu Editor
 
-Open: `3rd Party -> Menu Edit`.
+Navigate to **3rd Party > Menu Edit** in LuCI.
 
-### Current entries
+### Adding an Entry
 
-- The top table shows all configured entries.
-- Click any row to prefill the Add / update form with that entry data.
-- The "ID to delete" field below is also filled with the clicked ID, so you can delete it easily.
+| Field | Description |
+|-------|-------------|
+| **ID** | Short internal name (e.g., `transmission`) |
+| **Label** | Display name shown in the menu |
+| **Port** | Port number for local services (ignored for external URLs) |
+| **Path** | Local path (`/transmission/web/`) or full URL (`https://example.com`) |
+| **Embed** | Check to display inside LuCI, uncheck to open directly |
 
-### Add or update an entry
+### Examples
 
-Fields:
+| ID | Label | Port | Path | Embed |
+|----|-------|------|------|-------|
+| `transmission` | Transmission | 9091 | `/transmission/web/` | No |
+| `pgp` | PGP Tools | 80 | `/pgp/` | Yes |
+| `wigle` | WiGLE Upload | 80 | `https://wigle.net/uploads` | Yes |
 
-- **ID**  
-  Short internal name, for example `transmission` or `pgp`.  
-  If you reuse an ID, the entry is updated.
+### Editing and Deleting
 
-- **Label**  
-  Display name that appears in the 3rd Party menu.
+- Click any row in the table to load it into the form
+- Modify fields and click **Save entry** to update
+- Use the **Delete entry** button to remove entries
 
-- **Port**  
-  - For local services behind LuCI: `80`, `9091`, etc.  
-  - If **Path** is a full URL (starting with `http://` or `https://`), this value is ignored.
+After changes, the interface restarts automatically.
 
-- **Path**  
-  - Local example: `/transmission/web/` or `/pgp/`.  
-  - External example: `https://wigle.net/uploads`.  
-  - If it starts with `http://` or `https://` it is treated as a complete external URL.  
-  - Otherwise it is treated as a path on the current OpenWrt host.
+## Configuration File
 
-- **Embed**  
-  - Checked: the target opens inside an iframe within LuCI and keeps the OpenWrt header and menu.  
-  - Unchecked: the browser navigates directly to the target URL.
+Menu entries are stored in `/etc/thirdparty_menu.conf`:
 
-Flow:
-
-1. Fill ID, Label, Port, Path, Embed as needed.
-2. Press **Save entry**.
-3. A confirmation overlay explains that the interface will restart.
-4. Click **Apply changes**.
-   - The change is submitted.
-   - LuCI caches are cleared and rpcd/uhttpd restart in the background.
-   - The browser is redirected to `/cgi-bin/luci`.
-5. Log back in if needed.  
-   The new entry now appears under the **3rd Party** menu.
-
-### Delete an entry
-
-1. Click the row of the entry you want to remove.  
-   - The "ID to delete" field is filled automatically.
-2. Press **Delete entry**.
-3. Confirmation overlay appears, click **Apply changes**.
-4. After redirect and login, the item is gone from the 3rd Party menu.
-
-## Configuration file format
-
-Runtime configuration lives in:
-
-```txt
-/etc/thirdparty_menu.conf
 ```
-
-Each non empty line:
-
-```txt
 id|Label|Port|Path|Embed
+transmission|Transmission|9091|/transmission/web/|0
+pgp|PGP Tools|80|/pgp/|1
 ```
 
-- `id`  
-  Internal key, must be unique and must not be `medit`.
+You can edit this file manually. The Menu Editor reads and writes to this file.
 
-- `Label`  
-  Text shown in the menu.
+## Repository Structure
 
-- `Port`  
-  Port number used when `Path` is a local path.
+```
+OpenWrt-Extra-Menu/
+├── install.sh                  # Installation script
+├── etc/
+│   └── thirdparty_menu.conf.example
+└── luci/
+    ├── controller/
+    │   └── thirdparty.lua      # LuCI controller
+    └── view/thirdparty/
+        ├── embed.htm           # Iframe embed template
+        └── medit.htm           # Menu editor page
+```
 
-- `Path`  
-  - If it starts with `http://` or `https://`, used as is.  
-  - Otherwise treated as a local path on the OpenWrt host.
+## Uninstall
 
-- `Embed`  
-  - `0` open direct.  
-  - `1` embed inside LuCI.
+```sh
+rm -f /usr/lib/lua/luci/controller/thirdparty.lua
+rm -rf /usr/lib/lua/luci/view/thirdparty
+rm -f /etc/thirdparty_menu.conf
+rm -f /tmp/luci-indexcache*
+rm -rf /tmp/luci-modulecache/*
+/etc/init.d/rpcd restart
+/etc/init.d/uhttpd restart
+```
 
-You can edit this file by hand or manage it from **Menu Edit**. The controller ignores lines that do not match the pipe format, so you can add comment lines if you like.
+## License
 
-## Notes
-
-- Tested on OpenWrt x86_64 with modern LuCI.  
-- Designed so non technical users can manage external and local tools from one place.  
-- If LuCI structure changes in future releases, only `thirdparty.lua` may need adjustment, the config file and views should stay usable.
+MIT License - See [LICENSE](LICENSE) for details.
