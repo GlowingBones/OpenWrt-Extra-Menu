@@ -1,0 +1,99 @@
+Follow these steps to set up your GitHub repository for the LuCI 3rd Party menu.
+
+1. Create the repository
+------------------------
+1) On GitHub, create a new repository. Example name:
+   luci-3rdparty-menu
+
+2) Clone it to your PC:
+   git clone https://github.com/<yourname>/luci-3rdparty-menu.git
+   cd luci-3rdparty-menu
+
+
+2. Place the files in the repo
+------------------------------
+You already have these files from ChatGPT:
+
+- thirdparty.lua
+- README.md
+- OpenWrt_3rdParty_Menu_Instructions.txt
+
+Do this from inside the repo directory on your PC:
+
+1) Create the directory structure:
+
+   mkdir -p usr/lib/lua/luci/controller
+
+2) Put the lua file in place:
+
+   mv /path/to/thirdparty.lua usr/lib/lua/luci/controller/thirdparty.lua
+
+3) Put the README.md in the repo root (same level as usr/):
+
+   mv /path/to/README.md README.md
+
+4) (Optional) Put the extra user instructions somewhere, for example docs/:
+
+   mkdir -p docs
+   mv /path/to/OpenWrt_3rdParty_Menu_Instructions.txt docs/
+
+Your repo layout should look like this:
+
+  luci-3rdparty-menu/
+    README.md
+    usr/
+      lib/
+        lua/
+          luci/
+            controller/
+              thirdparty.lua
+    docs/
+      OpenWrt_3rdParty_Menu_Instructions.txt
+
+
+3. Commit and push
+------------------
+From inside the repo:
+
+   git add README.md usr docs
+   git commit -m "Initial commit: LuCI 3rd Party menu for Transmission and PGP"
+   git push
+
+
+4. How users install from your repo
+-----------------------------------
+In README.md, the basic install sequence is:
+
+   # On your PC, from inside the cloned repo
+   scp usr/lib/lua/luci/controller/thirdparty.lua root@<router-ip>:/usr/lib/lua/luci/controller/
+
+   # On the router
+   rm -f /tmp/luci-indexcache
+   rm -rf /tmp/luci-modulecache
+   /etc/init.d/rpcd restart
+   /etc/init.d/uhttpd restart
+
+After that, LuCI will show:
+- a top level "3rd Party" menu
+- a "Transmission" item
+- a "PGP Tools" item
+
+Clicking:
+
+  3rd Party -> Transmission
+    http://<router-ip>:9091/transmission/web/
+
+  3rd Party -> PGP Tools
+    http://<router-ip>/pgp/
+
+
+5. Optional: add a LICENSE file
+-------------------------------
+If you want other people to reuse this easily, add a license file, for example MIT:
+
+   echo "MIT License" > LICENSE
+   git add LICENSE
+   git commit -m "Add license"
+   git push
+
+That is all you need for a clean, usable GitHub repository that matches your current setup.

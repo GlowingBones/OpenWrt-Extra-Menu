@@ -1,0 +1,6 @@
+# id|Label|Port|Path|Embed
+# Embed: 0 = open in new tab or same window, 1 = embed in LuCI iframe
+
+transmission|Transmission|9091|/transmission/web/|0
+pgp|PGP Tools|80|/pgp/|1
+WiggleUpload|Wiggle Upload|80|https://wigle.net/uploads|1

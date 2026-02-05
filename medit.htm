@@ -1,0 +1,296 @@
+<%+header%>
+
+<h2>3rd Party Menu Editor</h2>
+
+<style>
+  table.thirdparty-list tr.tp-row {
+    cursor: pointer;
+  }
+  table.thirdparty-list tr.tp-row:hover {
+    background-color: #303030;
+  }
+  table.thirdparty-list tr.tp-row td {
+    border-bottom: 1px solid #444;
+  }
+
+  /* Overlay popup */
+  #tp-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #tp-overlay-box {
+    background: #222;
+    border: 1px solid #555;
+    padding: 20px 30px;
+    max-width: 480px;
+    color: #fff;
+    text-align: left;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+  }
+
+  #tp-overlay-box h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+
+  #tp-overlay-box p {
+    margin: 4px 0;
+  }
+
+  #tp-overlay-box .tp-buttons {
+    margin-top: 15px;
+    text-align: right;
+  }
+
+  #tp-overlay-box button {
+    margin-left: 8px;
+  }
+</style>
+
+<div id="tp-overlay">
+  <div id="tp-overlay-box">
+    <h3>Apply menu changes</h3>
+    <p>Your changes are ready to be applied.</p>
+    <p>The web interface will restart to refresh the 3rd Party menu. This can log you out.</p>
+    <p>After applying, you will be redirected back to the login or main page automatically.</p>
+    <div class="tp-buttons">
+      <button type="button" id="tp-overlay-cancel">Cancel</button>
+      <button type="button" id="tp-overlay-continue">Apply changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- hidden iframe so the form can submit while we redirect the main page -->
+<iframe id="tp-submit-frame" name="tp-submit-frame" style="display:none;"></iframe>
+
+<% if msg then %>
+<div class="alert-message success">
+    <%=msg%>
+</div>
+<% end %>
+
+<h3>Current entries</h3>
+<p>
+  Click a row to load it into the form below for editing.<br />
+  <strong>Path rule:</strong> If Path starts with "http://" or "https://" it is treated as a full URL. Otherwise it is treated as a local path on this OpenWrt device.
+</p>
+
+<table class="table cbi-section-table thirdparty-list">
+    <tr>
+        <th>ID</th>
+        <th>Label</th>
+        <th>Port</th>
+        <th>Path</th>
+        <th>Embed</th>
+    </tr>
+    <% for _, it in ipairs(items or {}) do
+        local embedval = tostring(it.embed or "0")
+    %>
+    <tr class="tp-row"
+        data-id="<%=it.id%>"
+        data-label="<%=it.label%>"
+        data-port="<%=it.port%>"
+        data-path="<%=it.path%>"
+        data-embed="<%=embedval%>">
+        <td><%=it.id%></td>
+        <td><%=it.label%></td>
+        <td><%=it.port%></td>
+        <td><%=it.path%></td>
+        <td><%= (embedval == "1") and "Yes" or "" %></td>
+    </tr>
+    <% end %>
+</table>
+
+<h3>Add / update entry</h3>
+<form method="post" action="<%=REQUEST_URI%>" id="tp-edit-form">
+    <input type="hidden" name="action" value="add" />
+
+    <div class="cbi-section">
+        <div class="cbi-value">
+            <label class="cbi-value-title">ID</label>
+            <div class="cbi-value-field">
+                <input type="text" name="id" id="tp-id" />
+                <br />
+                <small>Example: transmission, pgp, zabbix</small>
+            </div>
+        </div>
+
+        <div class="cbi-value">
+            <label class="cbi-value-title">Label</label>
+            <div class="cbi-value-field">
+                <input type="text" name="label" id="tp-label" />
+            </div>
+        </div>
+
+        <div class="cbi-value">
+            <label class="cbi-value-title">Port</label>
+            <div class="cbi-value-field">
+                <input type="text" name="port" id="tp-port" value="80" />
+                <br />
+                <small>
+                  For local apps: 80 for normal HTTP, 9091 for Transmission, and similar values.<br />
+                  For full URLs in Path (https://example.com/) this Port value is ignored.
+                </small>
+            </div>
+        </div>
+
+        <div class="cbi-value">
+            <label class="cbi-value-title">Path</label>
+            <div class="cbi-value-field">
+                <input type="text" name="path" id="tp-path" value="/" />
+                <br />
+                <small>
+                  Local example: /transmission/web/ or /pgp/<br />
+                  External example: https://wigle.net/uploads
+                </small>
+            </div>
+        </div>
+
+        <div class="cbi-value">
+            <label class="cbi-value-title">Embed</label>
+            <div class="cbi-value-field">
+                <input type="checkbox" name="embed" id="tp-embed" value="1" />
+                Embed in LuCI (keep OpenWrt header and menu). External sites may block embedding.
+            </div>
+        </div>
+
+        <div class="cbi-value">
+            <div class="cbi-value-title"></div>
+            <div class="cbi-value-field">
+                <input class="cbi-button cbi-button-apply" type="button" id="tp-save-btn" value="Save entry" />
+            </div>
+        </div>
+    </div>
+</form>
+
+<h3>Delete entry</h3>
+<form method="post" action="<%=REQUEST_URI%>" id="tp-delete-form">
+    <input type="hidden" name="action" value="delete" />
+
+    <div class="cbi-section">
+        <div class="cbi-value">
+            <label class="cbi-value-title">ID to delete</label>
+            <div class="cbi-value-field">
+                <input type="text" name="id" id="tp-delete-id" />
+            </div>
+        </div>
+
+        <div class="cbi-value">
+            <div class="cbi-value-title"></div>
+            <div class="cbi-value-field">
+                <input class="cbi-button cbi-button-reset" type="button" id="tp-delete-btn" value="Delete entry" />
+            </div>
+        </div>
+    </div>
+</form>
+
+<script type="text/javascript">
+(function() {
+    var rows       = document.querySelectorAll("table.thirdparty-list tr.tp-row");
+    var idField    = document.getElementById("tp-id");
+    var labelField = document.getElementById("tp-label");
+    var portField  = document.getElementById("tp-port");
+    var pathField  = document.getElementById("tp-path");
+    var embedField = document.getElementById("tp-embed");
+    var delField   = document.getElementById("tp-delete-id");
+
+    // Clicking a row loads its data into the edit form
+    rows.forEach(function(row) {
+        row.addEventListener("click", function() {
+            var id    = row.getAttribute("data-id")    || "";
+            var label = row.getAttribute("data-label") || "";
+            var port  = row.getAttribute("data-port")  || "80";
+            var path  = row.getAttribute("data-path")  || "/";
+            var embed = row.getAttribute("data-embed") || "0";
+
+            idField.value    = id;
+            labelField.value = label;
+            portField.value  = port;
+            pathField.value  = path;
+
+            embedField.checked = (embed === "1");
+
+            if (delField) {
+                delField.value = id;
+            }
+        });
+    });
+
+    var overlay          = document.getElementById("tp-overlay");
+    var btnSave          = document.getElementById("tp-save-btn");
+    var btnDelete        = document.getElementById("tp-delete-btn");
+    var btnOverlayCancel = document.getElementById("tp-overlay-cancel");
+    var btnOverlayGo     = document.getElementById("tp-overlay-continue");
+
+    var editForm   = document.getElementById("tp-edit-form");
+    var deleteForm = document.getElementById("tp-delete-form");
+
+    var pendingAction = null; // "edit" or "delete"
+
+    function showOverlay(action) {
+        pendingAction = action;
+        if (overlay) {
+            overlay.style.display = "flex";
+        }
+    }
+
+    function hideOverlay() {
+        pendingAction = null;
+        if (overlay) {
+            overlay.style.display = "none";
+        }
+    }
+
+    if (btnSave) {
+        btnSave.addEventListener("click", function() {
+            showOverlay("edit");
+        });
+    }
+
+    if (btnDelete) {
+        btnDelete.addEventListener("click", function() {
+            showOverlay("delete");
+        });
+    }
+
+    if (btnOverlayCancel) {
+        btnOverlayCancel.addEventListener("click", function() {
+            hideOverlay();
+        });
+    }
+
+    if (btnOverlayGo) {
+        btnOverlayGo.addEventListener("click", function() {
+            // send the form through the hidden iframe
+            var frameName = "tp-submit-frame";
+            if (pendingAction === "edit" && editForm) {
+                editForm.target = frameName;
+                editForm.submit();
+            } else if (pendingAction === "delete" && deleteForm) {
+                deleteForm.target = frameName;
+                deleteForm.submit();
+            }
+
+            // disable buttons so user cannot double click
+            btnOverlayGo.disabled = true;
+            if (btnOverlayCancel) btnOverlayCancel.disabled = true;
+
+            // keep the overlay visible and redirect the main window shortly
+            setTimeout(function() {
+                window.location.href = "/cgi-bin/luci";
+            }, 1500);
+        });
+    }
+})();
+</script>
+
+<%+footer%>
