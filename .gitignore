@@ -1,0 +1,12 @@
+# Archives
+*.tar.gz
+*.zip
+
+# Editor files
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
